@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>今日、どこいく？ v0.3</title>
+<style>
+:root{--bg:#f5f4f1;--card:#fff;--ink:#202124;--muted:#6b6b68;--line:#deddd8;--accent:#3f5d50}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}
+header{padding:24px 18px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+h1{margin:0;font-size:25px}h1 small{font-size:12px;color:var(--muted);font-weight:500;margin-left:8px}
+nav{display:flex;gap:8px;margin-top:16px;overflow:auto}nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;white-space:nowrap}
+nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+main{max-width:980px;margin:auto;padding:18px}.section{margin-bottom:22px}.section h2{font-size:18px;margin:0 0 10px}.sub{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:10px 0;box-shadow:0 2px 10px #00000008}
+.hero{border:2px solid var(--accent)}.hero h3{margin:0 0 8px;font-size:20px}.hero .why{line-height:1.7;margin:10px 0}
+.weather{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.metric{background:#f3f2ee;border-radius:12px;padding:9px}.metric b{display:block;font-size:16px}.metric span{font-size:11px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0}.tag{background:#eeeDE8;border-radius:999px;padding:5px 9px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.area{cursor:pointer}.area h3{margin:0 0 4px}.area p{margin:0;color:var(--muted);font-size:12px}
+.spot h3{margin:0}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}.score{font-weight:700;color:var(--accent)}.detail{margin-top:10px;line-height:1.65;font-size:13px}
+button.primary{border:0;background:var(--accent);color:#fff;border-radius:10px;padding:10px 13px;cursor:pointer}button.secondary{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer}
+.hidden{display:none}.notice{padding:12px;border-radius:12px;background:#eeeDE8;font-size:13px;line-height:1.6}
+@media(max-width:600px){.weather{grid-template-columns:repeat(2,1fr)}main{padding:14px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>今日、どこいく？ <small>v0.3 試作</small></h1>
+  <nav>
+    <button class="tab active" data-tab="today">TODAY'S SHOOT</button>
+    <button class="tab" data-tab="spots">候補スポット</button>
+    <button class="tab" data-tab="records">撮影記録</button>
+  </nav>
+</header>
+<main>
+<section id="today" class="panel">
+  <div class="section">
+    <h2>今日の撮影判断</h2>
+    <div class="card">
+      <div class="weather" id="todayWeather"></div>
+      <div class="notice" id="todayDecision"></div>
+    </div>
+  </div>
+  <div class="section">
+    <h2>今日のおすすめ</h2>
+    <div id="todayPick"></div>
+  </div>
+</section>
+
+<section id="spots" class="panel hidden">
+  <div class="section">
+    <h2>エリアから探す</h2>
+    <p class="sub">まず「今日はどこへ行きたいか」をあなたが決める。選んだエリアの中で、今日の条件に合うチャッピーレコメンドを一番上に表示します。</p>
+    <div class="grid" id="areas"></div>
+  </div>
+  <div id="areaView" class="hidden">
+    <div class="row">
+      <div><h2 id="areaTitle"></h2><div class="sub" id="areaSub"></div></div>
+      <button class="secondary" onclick="backAreas()">エリア一覧へ</button>
+    </div>
+    <div id="areaRecommend"></div>
+    <h2 style="margin-top:22px">その他の候補</h2>
+    <div id="otherSpots"></div>
+  </div>
+</section>
+
+<section id="records" class="panel hidden">
+  <div class="section"><h2>撮影記録</h2><p class="sub">ここは今後、過去動画から抽出した情報と現地での実績を蓄積していく場所。</p></div>
+  <div class="notice">試作版では入力フォームをまだ作り込まず、次版で「場所・日時・天気・風・機材・音・撮影テーマ・良かったカット・失敗・次回の別案」を保存できるようにします。</div>
+</section>
+</main>
+
+<script>
+const areas = {
+ "鳥取市": {access:"自転車・バス", desc:"市街地／海岸／郊外を分けて探す"},
+ "岩美町": {access:"列車・バス", desc:"海・港・集落・駅周辺"},
+ "国府町": {access:"自転車中心", desc:"中心部から現実的に行ける範囲を重視"},
+ "八頭町": {access:"バス中心", desc:"郡家周辺と郊外を分ける"},
+ "若桜町": {access:"バス", desc:"水路・町並み・山間の空気"},
+ "用瀬町": {access:"列車", desc:"駅周辺＋川沿い＋集落"},
+ "智頭町": {access:"列車", desc:"宿場町・川・山・季節感"},
+ "倉吉市": {access:"列車・バス", desc:"白壁土蔵群・駅周辺・川・郊外"},
+ "中部郊外": {access:"列車・バス中心", desc:"季節の景観を広く探索"},
+ "米子市": {access:"列車・バス", desc:"市街・水辺・郊外"},
+ "西部": {access:"列車・バス", desc:"遠方は移動負担を考慮"}
+};
+
+const spots = [
+ {area:"鳥取市",name:"鳥取駅〜市街地の路地",access:"自転車・バス",sound:"人の声・車・街の生活音",hand:"フィックス＋微かな横移動",gimbal:"歩く視点を作る時に有効",look:"駅から一本外れた生活道路、反射、夕方の人の流れ",score:4},
+ {area:"岩美町",name:"東浜駅〜海岸周辺",access:"列車",sound:"鳥の声◎／波は場所差あり",hand:"鳥の声を待つフィックス",gimbal:"海と駅を繋ぐ動きに有効",look:"鳥の声が強い場所、波が聞こえる位置、駅と海の距離",score:4},
+ {area:"国府町",name:"因幡国庁跡〜中郷周辺",access:"自転車",sound:"田園・鳥・風",hand:"田園の静けさを固定中心",gimbal:"道を進む感覚を作る場合のみ",look:"山を背景にした生活道、田園の奥行き、通過する自転車",score:4},
+ {area:"国府町",name:"旧美歎水源地周辺",access:"自転車＋徒歩（現地状況確認）",sound:"水・鳥・木々",hand:"水音を主役にフィックス",gimbal:"水辺の動きを拾う時に有効",look:"水面、古い構造物、木々の反射",score:5},
+ {area:"八頭町",name:"郡家〜郊外の生活風景",access:"バス中心",sound:"生活音・鳥・水",hand:"人の少ない時間をフィックス中心",gimbal:"移動のある通りだけ",look:"駅前から一本外れた道、農地と住宅の境目",score:3},
+ {area:"若桜町",name:"若桜駅〜町なかの水路",access:"バス",sound:"水路の激しい水音◎",hand:"水音を活かす固定＋微移動",gimbal:"水・町・山を繋ぐムーブ",look:"町の至る所の水路、橋、水音と建物の関係",score:5},
+ {area:"用瀬町",name:"用瀬駅〜川沿い",access:"列車",sound:"川◎／鳥／列車",hand:"水音と鳥を待つ",gimbal:"駅から町へ入る導線",look:"線路沿い、川、橋、列車が見える道",score:5},
+ {area:"智頭町",name:"宿場町〜川沿い",access:"列車",sound:"川・鳥・生活音",hand:"穏やかな町の空気を固定中心",gimbal:"町歩きの視点を作る時",look:"花だけでなく水、木、路地、山の重なり",score:5},
+ {area:"倉吉市",name:"白壁土蔵群・夕方の裏通り",access:"列車・バス",sound:"静か／人通り少なめの時間帯",hand:"静けさを活かすフィックス＋微移動",gimbal:"散策感を作る時に有効",look:"閉店後の店先、路地、建物の隙間、たまに通る人",score:5},
+ {area:"倉吉市",name:"玉川周辺",access:"列車・バス＋徒歩",sound:"水・街の生活音",hand:"水音を軸に静かに",gimbal:"橋からの低い視点など",look:"水面、橋、白壁との組み合わせ",score:4},
+ {area:"倉吉市",name:"倉吉駅周辺",access:"列車",sound:"駅・街の音",hand:"人の流れを固定で待つ",gimbal:"駅から町へ歩く視点",look:"帰宅時間の人、反射、駅前の光",score:3},
+ {area:"中部郊外",name:"季節の花・田園エリア",access:"場所ごとに確認",sound:"鳥・虫・風",hand:"花と周囲の空気を一緒に",gimbal:"花の間を抜ける動きは限定的に",look:"開花情報が確認できる場所を優先",score:4},
+ {area:"米子市",name:"米子駅〜市街地",access:"列車",sound:"街・列車・生活音",hand:"人の流れを観察",gimbal:"街歩きの導線",look:"観光名所より生活道路と駅の関係",score:3},
+ {area:"西部",name:"水辺・山間の季節スポット",access:"列車・バス／便数注意",sound:"現地調査が必要",hand:"環境音を最優先",gimbal:"動きが必要な場所だけ",look:"開花・紅葉など最新情報がある場所を優先",score:3}
+];
+
+function weatherFor(area){
+  // 試作版：実運用では地点ごとの最新気象APIへ接続
+  const seed = [...area].reduce((a,c)=>a+c.charCodeAt(0),0);
+  const wind = (1.4 + (seed%28)/10).toFixed(1);
+  const dirs=["北","北東","東","南東","南","南西","西","北西"];
+  return {temp:18+(seed%7),wind,dir:dirs[seed%dirs.length],weather:["晴れ","薄曇り","曇り"][seed%3]};
+}
+function wxHTML(w){
+ return `<div class="metric"><span>天気</span><b>${w.weather}</b></div><div class="metric"><span>気温</span><b>${w.temp}℃</b></div><div class="metric"><span>風速</span><b>${w.wind}m/s</b></div><div class="metric"><span>風向</span><b>${w.dir}</b></div>`;
+}
+function recommend(list,area){
+ const w=weatherFor(area);
+ return [...list].sort((a,b)=>b.score-a.score)[0];
+}
+function card(s,w){
+ return `<div class="card spot"><div class="row"><div><h3>${s.name}</h3><div class="sub">${s.access}</div></div><div class="score">撮影価値 ${s.score}/5</div></div>
+ <div class="weather">${wxHTML(w)}</div>
+ <div class="tags"><span class="tag">🔊 ${s.sound}</span><span class="tag">🎒 ${s.access}</span></div>
+ <div class="detail"><b>👀 目を向けたいもの</b><br>${s.look}<br><br><b>手持ちなら</b> ${s.hand}<br><b>ジンバルなら</b> ${s.gimbal}</div></div>`;
+}
+function renderToday(){
+ const w=weatherFor("鳥取市");
+ document.getElementById("todayWeather").innerHTML=wxHTML(w);
+ const windy=parseFloat(w.wind)>3;
+ document.getElementById("todayDecision").innerHTML=windy ?
+ "風がやや強め。MKE200で現地の空気感を残すあなたの撮影では、風の影響を受けにくい場所を優先したい日。雨ならさらに慎重に判断します。" :
+ "風は比較的扱いやすい範囲。環境音を活かす撮影に向いていそうです。実運用では複数の気象ソースを照合して判断します。";
+ const s=spots.filter(x=>x.area==="鳥取市")[0];
+ document.getElementById("todayPick").innerHTML=card(s,w);
+}
+function renderAreas(){
+ document.getElementById("areas").innerHTML=Object.entries(areas).map(([n,v])=>`<div class="card area" onclick="openArea('${n}')"><h3>${n}</h3><p>${v.access}　｜　${v.desc}</p></div>`).join("");
+}
+function openArea(area){
+ document.getElementById("areas").parentElement.classList.add("hidden");
+ document.getElementById("areaView").classList.remove("hidden");
+ document.getElementById("areaTitle").textContent=area;
+ document.getElementById("areaSub").textContent=areas[area].access+"　｜　"+areas[area].desc;
+ const list=spots.filter(s=>s.area===area);
+ const w=weatherFor(area);
+ const rec=recommend(list,area);
+ document.getElementById("areaRecommend").innerHTML=rec ? `<div class="card hero"><h3>🤖 チャッピーレコメンド</h3><div class="why"><b>今日は「${rec.name}」を攻めるのがおすすめ</b><br>今日の条件と、あなたの撮影スタイルを踏まえると、ここで「${rec.look}」を狙う意味があります。</div>${card(rec,w)}</div>` : `<div class="notice">このエリアはまだ具体的な撮影スポット情報が少ないです。今後の探索候補です。</div>`;
+ const others=list.filter(s=>!rec || s.name!==rec.name);
+ document.getElementById("otherSpots").innerHTML=others.length?others.map(s=>card(s,w)).join(""):"<div class='notice'>このエリアの候補をこれから増やします。</div>";
+}
+function backAreas(){
+ document.getElementById("areaView").classList.add("hidden");
+ document.getElementById("areas").parentElement.classList.remove("hidden");
+}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+ document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));
+ document.getElementById(b.dataset.tab).classList.remove("hidden");
+});
+renderAreas();renderToday();
+</script>
+</body>
+</html>
