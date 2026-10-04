@@ -3,160 +3,358 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>今日、どこいく？ v0.3</title>
+<title>今日、どこいく？</title>
 <style>
-:root{--bg:#f5f4f1;--card:#fff;--ink:#202124;--muted:#6b6b68;--line:#deddd8;--accent:#3f5d50}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}
-header{padding:24px 18px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-h1{margin:0;font-size:25px}h1 small{font-size:12px;color:var(--muted);font-weight:500;margin-left:8px}
-nav{display:flex;gap:8px;margin-top:16px;overflow:auto}nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;white-space:nowrap}
-nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-main{max-width:980px;margin:auto;padding:18px}.section{margin-bottom:22px}.section h2{font-size:18px;margin:0 0 10px}.sub{color:var(--muted);font-size:13px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:10px 0;box-shadow:0 2px 10px #00000008}
-.hero{border:2px solid var(--accent)}.hero h3{margin:0 0 8px;font-size:20px}.hero .why{line-height:1.7;margin:10px 0}
-.weather{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.metric{background:#f3f2ee;border-radius:12px;padding:9px}.metric b{display:block;font-size:16px}.metric span{font-size:11px;color:var(--muted)}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0}.tag{background:#eeeDE8;border-radius:999px;padding:5px 9px;font-size:12px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.area{cursor:pointer}.area h3{margin:0 0 4px}.area p{margin:0;color:var(--muted);font-size:12px}
-.spot h3{margin:0}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}.score{font-weight:700;color:var(--accent)}.detail{margin-top:10px;line-height:1.65;font-size:13px}
-button.primary{border:0;background:var(--accent);color:#fff;border-radius:10px;padding:10px 13px;cursor:pointer}button.secondary{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer}
-.hidden{display:none}.notice{padding:12px;border-radius:12px;background:#eeeDE8;font-size:13px;line-height:1.6}
-@media(max-width:600px){.weather{grid-template-columns:repeat(2,1fr)}main{padding:14px}}
+:root{--bg:#f5f4f0;--card:#fff;--ink:#20201e;--muted:#686761;--line:#dedcd5;--accent:#405d50;--accent2:#e9eee9;--warn:#8a5d31;--blue:#456b84}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;line-height:1.55}
+header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px 10px}.header-top{display:flex;justify-content:space-between;align-items:center;gap:10px}.current-time{font-size:14px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent);white-space:nowrap}
+header h1{margin:0;font-size:23px}header h1 span{font-size:10px;color:var(--muted);font-weight:500;margin-left:7px}
+nav{display:flex;gap:7px;margin-top:12px;overflow:auto}nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 13px;white-space:nowrap}nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+main{max-width:1040px;margin:auto;padding:18px}.panel.hidden{display:none}.section{margin-bottom:22px}.section h2{font-size:18px;margin:0 0 5px}.lead,.small,.muted{color:var(--muted);font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin:10px 0;box-shadow:0 2px 12px #00000007}
+.hero{border:2px solid var(--accent)}.hero h3{margin:0 0 8px;font-size:19px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:9px}
+.area{cursor:pointer}.area h3{margin:2px 0 3px}.area p{margin:0;color:var(--muted);font-size:12px}
+.area.top{border:2px solid var(--accent)}.priority{font-size:10px;color:var(--accent);font-weight:700}
+.weather{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0}.metric{background:#f2f1ed;border-radius:11px;padding:8px}.metric span{display:block;font-size:10px;color:var(--muted)}.metric b{display:block;font-size:15px}
+.sun{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sunbox{background:#f2f1ed;border-radius:11px;padding:9px;font-size:12px}.sunbox b{display:block}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.tags{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0}.tag{background:var(--accent2);border-radius:999px;padding:5px 8px;font-size:11px}
+.block{margin-top:13px;padding-top:12px;border-top:1px solid #eceae4}.block h4{margin:0 0 5px;font-size:13px}.block p{margin:0;font-size:13px}
+.list{margin:5px 0 0;padding-left:18px;font-size:13px}.list li{margin:4px 0}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.select{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 10px}
+button.primary{border:0;background:var(--accent);color:#fff;border-radius:10px;padding:10px 13px;cursor:pointer}button.secondary{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 11px;cursor:pointer}
+.note{background:#f0eee8;border-radius:12px;padding:11px;font-size:12px}.source{font-size:10px;color:var(--muted);margin-top:8px}
+.status{font-size:12px;color:var(--muted);margin-bottom:8px}.forecast{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:7px}.forecast-item{background:#f2f1ed;border-radius:10px;padding:8px;font-size:11px}.forecast-item b{display:block;font-size:13px;margin:2px 0}.forecast-risk{margin-top:9px;padding:9px;border-radius:10px;background:#faf7ef;font-size:12px}.chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:10px;margin:2px}
+.angle{background:#f7f5ef;border-left:4px solid var(--accent);padding:11px;border-radius:9px;font-size:13px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.detail-box{background:#faf9f6;border-radius:11px;padding:11px}
+.back{margin:8px 0}.fixed-back{position:sticky;top:78px;z-index:15;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--line)}.back-spacer{height:2px}.hidden{display:none!important}
+.record{border-left:4px solid var(--blue)}
+@media(max-width:650px){.weather{grid-template-columns:repeat(2,1fr)}.sun,.detail-grid{grid-template-columns:1fr}main{padding:13px}}
 </style>
 </head>
 <body>
 <header>
-  <h1>今日、どこいく？ <small>v0.3 試作</small></h1>
-  <nav>
-    <button class="tab active" data-tab="today">TODAY'S SHOOT</button>
-    <button class="tab" data-tab="spots">候補スポット</button>
-    <button class="tab" data-tab="records">撮影記録</button>
-  </nav>
+<div class="header-top"><h1>今日、どこいく？ <span>撮影アシスタント</span></h1><div id="currentTime" class="current-time">--:--</div></div>
+<nav>
+<button class="tab active" data-tab="today">TODAY'S SHOOT</button>
+<button class="tab" data-tab="spots">候補スポット</button>
+<button class="tab" data-tab="records">撮影記録</button>
+</nav>
 </header>
+
 <main>
 <section id="today" class="panel">
   <div class="section">
-    <h2>今日の撮影判断</h2>
+    <h2>今の撮影判断</h2>
+    <p class="lead">「今、家を出るならどうか」を判断。現在の天候・風・光に加え、この先数時間の変化も見て撮影条件を考えます。</p>
     <div class="card">
-      <div class="weather" id="todayWeather"></div>
-      <div class="notice" id="todayDecision"></div>
+      <div id="todayStatus" class="status">気象情報を取得しています…</div>
+      <div id="todayWeather" class="weather"></div><div style="margin-top:8px"><button class="secondary" id="useLocationWeather">📍 現在地の天候を取得</button><span id="locationStatus" class="muted" style="margin-left:8px"></span><div class="muted" style="margin-top:5px">位置情報を許可すると、その地点の緯度・経度を使って天候を計算します。</div></div>
+      <div id="todaySun" class="sun"></div>
+      <div id="todayForecast" class="card" style="margin-top:10px"></div>
+      <div id="todayDecision"></div>
     </div>
   </div>
+
   <div class="section">
-    <h2>今日のおすすめ</h2>
+    <h2>今日の第一候補</h2>
     <div id="todayPick"></div>
+  </div>
+
+  <div class="section">
+    <h2>今日、別の場所を選ぶなら</h2>
+    <div class="grid" id="quickAreas"></div>
   </div>
 </section>
 
 <section id="spots" class="panel hidden">
-  <div class="section">
-    <h2>エリアから探す</h2>
-    <p class="sub">まず「今日はどこへ行きたいか」をあなたが決める。選んだエリアの中で、今日の条件に合うチャッピーレコメンドを一番上に表示します。</p>
-    <div class="grid" id="areas"></div>
+  <div id="areaList">
+    <div class="section">
+      <h2>候補スポット</h2>
+      <p class="lead">まずエリアを選択。その中で、今日の条件に合うレコメンドを一番上に出します。鳥取市・国府町を最優先にしています。</p>
+      <div class="grid" id="areas"></div>
+    </div>
   </div>
   <div id="areaView" class="hidden">
-    <div class="row">
-      <div><h2 id="areaTitle"></h2><div class="sub" id="areaSub"></div></div>
-      <button class="secondary" onclick="backAreas()">エリア一覧へ</button>
+    <div class="fixed-back"><button class="secondary" onclick="backAreas()">← エリア一覧へ</button></div>
+    <div class="back-spacer"></div>
+    <div class="row"><div><h2 id="areaTitle"></h2><div id="areaSub" class="lead"></div></div></div>
+    <div class="card">
+      <div id="areaStatus" class="status">気象情報を取得しています…</div>
+      <div id="areaWeather" class="weather"></div>
+      <div id="areaSun" class="sun"></div>
+      <div id="areaForecast" class="card" style="margin-top:10px"></div>
     </div>
     <div id="areaRecommend"></div>
-    <h2 style="margin-top:22px">その他の候補</h2>
+    <h2 style="margin-top:24px">このエリアで他に狙える場所</h2>
     <div id="otherSpots"></div>
   </div>
 </section>
 
 <section id="records" class="panel hidden">
-  <div class="section"><h2>撮影記録</h2><p class="sub">ここは今後、過去動画から抽出した情報と現地での実績を蓄積していく場所。</p></div>
-  <div class="notice">試作版では入力フォームをまだ作り込まず、次版で「場所・日時・天気・風・機材・音・撮影テーマ・良かったカット・失敗・次回の別案」を保存できるようにします。</div>
+  <div class="section">
+    <h2>撮影記録</h2>
+    <p class="lead">「どこへ行ったか」だけでなく、何を撮り、何が良くて、次はどう変えるかを残す場所。</p>
+    <div id="recordList"></div>
+  </div>
 </section>
 </main>
 
 <script>
-const areas = {
- "鳥取市": {access:"自転車・バス", desc:"市街地／海岸／郊外を分けて探す"},
- "岩美町": {access:"列車・バス", desc:"海・港・集落・駅周辺"},
- "国府町": {access:"自転車中心", desc:"中心部から現実的に行ける範囲を重視"},
- "八頭町": {access:"バス中心", desc:"郡家周辺と郊外を分ける"},
- "若桜町": {access:"バス", desc:"水路・町並み・山間の空気"},
- "用瀬町": {access:"列車", desc:"駅周辺＋川沿い＋集落"},
- "智頭町": {access:"列車", desc:"宿場町・川・山・季節感"},
- "倉吉市": {access:"列車・バス", desc:"白壁土蔵群・駅周辺・川・郊外"},
- "中部郊外": {access:"列車・バス中心", desc:"季節の景観を広く探索"},
- "米子市": {access:"列車・バス", desc:"市街・水辺・郊外"},
- "西部": {access:"列車・バス", desc:"遠方は移動負担を考慮"}
+const areas={
+"鳥取市":{access:"自転車・バス",desc:"市街地・海岸・砂丘・生活風景",lat:35.5011,lon:134.2351},
+"国府町":{access:"自転車中心／奥地は難度上昇",desc:"田園・水・歴史・山あい",lat:35.4920,lon:134.2800},
+"岩美町":{access:"列車・バス",desc:"海岸・港・集落・花・水",lat:35.5750,lon:134.3300},
+"八頭町":{access:"バス・若桜鉄道",desc:"駅・川・田園・桜・山里",lat:35.4100,lon:134.2500},
+"若桜町":{access:"バス",desc:"水路・町並み・駅・山",lat:35.3250,lon:134.4000},
+"用瀬町":{access:"列車",desc:"川・駅・町・生活音",lat:35.3500,lon:134.2100},
+"智頭町":{access:"列車",desc:"宿場町・川・花・山・紅葉",lat:35.2650,lon:134.2250},
+"倉吉市":{access:"列車・バス",desc:"白壁・水・路地・駅",lat:35.4300,lon:133.8250},
+"中部郊外":{access:"列車・バス中心",desc:"花・田園・水辺",lat:35.4200,lon:133.9000},
+"米子市":{access:"列車・バス",desc:"駅・市街・水辺",lat:35.4280,lon:133.3310},
+"西部":{access:"列車・バス",desc:"山・水辺・季節景観",lat:35.4300,lon:133.3000}
 };
 
-const spots = [
- {area:"鳥取市",name:"鳥取駅〜市街地の路地",access:"自転車・バス",sound:"人の声・車・街の生活音",hand:"フィックス＋微かな横移動",gimbal:"歩く視点を作る時に有効",look:"駅から一本外れた生活道路、反射、夕方の人の流れ",score:4},
- {area:"岩美町",name:"東浜駅〜海岸周辺",access:"列車",sound:"鳥の声◎／波は場所差あり",hand:"鳥の声を待つフィックス",gimbal:"海と駅を繋ぐ動きに有効",look:"鳥の声が強い場所、波が聞こえる位置、駅と海の距離",score:4},
- {area:"国府町",name:"因幡国庁跡〜中郷周辺",access:"自転車",sound:"田園・鳥・風",hand:"田園の静けさを固定中心",gimbal:"道を進む感覚を作る場合のみ",look:"山を背景にした生活道、田園の奥行き、通過する自転車",score:4},
- {area:"国府町",name:"旧美歎水源地周辺",access:"自転車＋徒歩（現地状況確認）",sound:"水・鳥・木々",hand:"水音を主役にフィックス",gimbal:"水辺の動きを拾う時に有効",look:"水面、古い構造物、木々の反射",score:5},
- {area:"八頭町",name:"郡家〜郊外の生活風景",access:"バス中心",sound:"生活音・鳥・水",hand:"人の少ない時間をフィックス中心",gimbal:"移動のある通りだけ",look:"駅前から一本外れた道、農地と住宅の境目",score:3},
- {area:"若桜町",name:"若桜駅〜町なかの水路",access:"バス",sound:"水路の激しい水音◎",hand:"水音を活かす固定＋微移動",gimbal:"水・町・山を繋ぐムーブ",look:"町の至る所の水路、橋、水音と建物の関係",score:5},
- {area:"用瀬町",name:"用瀬駅〜川沿い",access:"列車",sound:"川◎／鳥／列車",hand:"水音と鳥を待つ",gimbal:"駅から町へ入る導線",look:"線路沿い、川、橋、列車が見える道",score:5},
- {area:"智頭町",name:"宿場町〜川沿い",access:"列車",sound:"川・鳥・生活音",hand:"穏やかな町の空気を固定中心",gimbal:"町歩きの視点を作る時",look:"花だけでなく水、木、路地、山の重なり",score:5},
- {area:"倉吉市",name:"白壁土蔵群・夕方の裏通り",access:"列車・バス",sound:"静か／人通り少なめの時間帯",hand:"静けさを活かすフィックス＋微移動",gimbal:"散策感を作る時に有効",look:"閉店後の店先、路地、建物の隙間、たまに通る人",score:5},
- {area:"倉吉市",name:"玉川周辺",access:"列車・バス＋徒歩",sound:"水・街の生活音",hand:"水音を軸に静かに",gimbal:"橋からの低い視点など",look:"水面、橋、白壁との組み合わせ",score:4},
- {area:"倉吉市",name:"倉吉駅周辺",access:"列車",sound:"駅・街の音",hand:"人の流れを固定で待つ",gimbal:"駅から町へ歩く視点",look:"帰宅時間の人、反射、駅前の光",score:3},
- {area:"中部郊外",name:"季節の花・田園エリア",access:"場所ごとに確認",sound:"鳥・虫・風",hand:"花と周囲の空気を一緒に",gimbal:"花の間を抜ける動きは限定的に",look:"開花情報が確認できる場所を優先",score:4},
- {area:"米子市",name:"米子駅〜市街地",access:"列車",sound:"街・列車・生活音",hand:"人の流れを観察",gimbal:"街歩きの導線",look:"観光名所より生活道路と駅の関係",score:3},
- {area:"西部",name:"水辺・山間の季節スポット",access:"列車・バス／便数注意",sound:"現地調査が必要",hand:"環境音を最優先",gimbal:"動きが必要な場所だけ",look:"開花・紅葉など最新情報がある場所を優先",score:3}
+const spots=[
+/* 鳥取市 */
+{area:"鳥取市",name:"鳥取砂丘・砂丘の縁／夕方",access:"バス・徒歩",sound:"風・砂・遠い人声",season:"通年／夕方の光",look:["砂丘そのものを説明しない","風紋が出ている場所","人の足跡が一本だけ残る場所","砂丘と海の境目","人が小さく見える遠景"],today:"風が弱い日は砂の質感と静けさを狙う。風が強い日は風そのものを“敵”ではなく画の要素として使えるか判断。",hand:"24mmで低い位置から固定気味。砂の流れを追わず、時間が動くのを待つ。",gimbal:"使うなら砂丘を登る動線を一本だけ。歩き回らず、移動そのものを作品の骨格にする。",newAngle:"これまで完成作品になっていない場所なので、今回は『砂丘を見せる』のではなく『人が砂の中で小さくなる』映像にする案。",source:"鳥取市公式・鳥取砂丘情報"},
+{area:"鳥取市",name:"鳥取駅〜市街地の帰宅時間",access:"自転車・徒歩",sound:"駅・人・車・生活音",season:"夕方〜夜",look:["駅を出た人の流れ","ガラスや水面の反射","一本裏の生活道路","信号待ちの人","店じまいの気配"],today:"『家路』を再現するのではなく、鳥取の日常として撮る。人を主役にしないことで街の空気を残す。",hand:"固定で人が横切るのを待つ。必要なら短い手持ち移動を1カットだけ。",gimbal:"駅から裏通りへ入る1本の導線をゆっくり。",newAngle:"過去の『家に帰ろう／夕暮れ、家路へ』系の経験を踏まえ、今回は“鳥取の生活音”を主役にしてみる。"},
+{area:"鳥取市",name:"樗谿公園〜鳥取東照宮周辺",access:"自転車・徒歩",sound:"鳥・水・木々・街の遠音",season:"新緑〜紅葉／雨上がり",look:["木々の奥に見える建物","濡れた石・落ち葉","鳥の声が強くなる場所","街の音が遠ざかる境目"],today:"市街地から近いのに空気が切り替わる“境界”を撮る。環境音を活かしやすい場所として候補。",hand:"固定中心。音を先に決めてから画角を決める。",gimbal:"参道や園路の入口→奥への変化を1本。",newAngle:"観光地紹介にせず『鳥取市内なのに音が変わる』作品にする。"},
+/* 国府 */
+{area:"国府町",name:"旧美歎水源地",access:"自転車＋徒歩／公開・立入条件確認",sound:"水・鳥・木々",season:"春〜秋／秋は紅葉",look:["濾過池と水面の反射","古い水道施設と木々","落ち葉＋水","建物の影","人がいない時間の広場"],today:"秋は施設より『時間が積もった水辺』を狙う。11月1日〜3月31日は貯水池見学路が閉鎖されるため季節条件を必ず確認。",hand:"24mmで建物を大きく説明せず、前景に草木や水を入れて奥行きを作る。",gimbal:"濾過池→施設をつなぐ移動を1本だけ。",newAngle:"『文化財を撮る』ではなく、水・木・古い構造物を同じ時間の中に置く。",source:"鳥取市公式（公開期間・季節閉鎖）"},
+{area:"国府町",name:"因幡国庁跡〜田園",access:"自転車",sound:"風・鳥・農作業・生活音",season:"田植え〜稲刈り／秋",look:["史跡と田園の距離","山を背景にした道","農地と住宅の境界","人が一人だけいる風景","夕方の長い影"],today:"史跡を説明するより『普通の田園の中に古代の中心地がある』違和感を映像にする。",hand:"固定多め。道路を歩くなら画面の奥へ抜けるだけにする。",gimbal:"田園→史跡→山を1本でつなぐ場合のみ。",newAngle:"観光地カットではなく“今の生活と昔の場所が同居している風景”を狙う。",source:"鳥取市公式・国府町フォトコンテスト"},
+{area:"国府町",name:"鳥取藩主池田家墓所",access:"自転車＋徒歩",sound:"木々・鳥・静寂",season:"春の桜／秋の紅葉",look:["灯籠の反復","山あいに続く墓碑","木漏れ日","落ち葉と石","入口から奥へ続く線"],today:"広大さを説明せず、灯籠の反復と静けさを使う。環境音を残すと“場所の重さ”が出しやすい。",hand:"固定＋ごく小さいパン。",gimbal:"参道の線を使うならゆっくり1本。",newAngle:"人物を入れず、音と反復で“人の気配がないのに人間の歴史を感じる”作品を試す。",source:"鳥取市公式"},
+{area:"国府町",name:"宇倍神社",access:"自転車＋徒歩",sound:"木々・鳥・参拝者・足音",season:"桜／紅葉／雨上がり",look:["石段","木々の暗部","濡れた石","参拝者の足元","境内と外の明暗差"],today:"社殿そのものを正面から撮るだけで終わらせず、参道に入る前後で音と光が変わるところを探す。",hand:"足音を活かしてゆっくり歩く。",gimbal:"石段を上る導線を短く。",newAngle:"『神社紹介』ではなく、街の音→参道→静寂という音の変化を作品の構成にする。",source:"鳥取市公式・国府町フォトコンテスト"},
+{area:"国府町",name:"雨滝",access:"バス等＋徒歩／現地条件確認",sound:"滝・水・森",season:"雨後・新緑・夏・紅葉",look:["滝だけでなく周囲の岩壁","水滴","足元の流れ","霧・湿気","滝から離れた森の音"],today:"滝の大きさを見せるだけではなく、音の強弱を使う。雨後なら『滝→小さな水→森』の順で空間を広げる。",hand:"滝を長回しするより、水の細部と周囲を固定で拾う。",gimbal:"水の流れを低い位置から追う短いカット。",newAngle:"ジンバルで派手に撮るだけでなく、環境音を主役にして“水の場所”として作る。",source:"鳥取市公式（2026年7月一般開放）"},
+/* 岩美 */
+{area:"岩美町",name:"東浜駅〜海岸",access:"列車",sound:"鳥◎／波／列車",season:"通年",look:["駅と海の関係","鳥の声が強い場所","線路沿いの道","海を見ないで海の音を拾う場所","夕方の人影"],today:"海景より『駅から海へ入る町の空気』。環境音を絶対に捨てない。風が強い日は海の開けた場所から逃げる。",hand:"固定中心。鳥や波を待つ。",gimbal:"駅→海の導線を1本だけ。",newAngle:"過去に撮った東浜でも、前回と違う道・音の位置を探す再訪候補。"},
+{area:"岩美町",name:"田後港",access:"バス・徒歩／便確認",sound:"港・波・生活音",season:"夕暮れ〜夜／通年",look:["港の奥行き","漁具","船の動き","家並みと海","夕暮れの反射"],today:"『海がきれい』ではなく、港で暮らす人の痕跡を拾う。",hand:"静かな固定＋短い手持ち。",gimbal:"港へ入る道から船までを短く。",newAngle:"観光ポスター的な海景ではなく、“港の一日が終わる時間”を狙う。",source:"岩美町公式（夕暮れの田後港の紹介）"},
+{area:"岩美町",name:"牧谷〜又助池",access:"バス・徒歩／季節確認",sound:"湿地・鳥・風",season:"カキツバタ開花期",look:["水面の反射","花だけでなく湿原全体","草の揺れ","鳥","花と周囲の空気"],today:"花のアップだけで終わらせず、花が咲いていることで変わる風景を撮る。",hand:"固定中心。花の揺れを時間として残す。",gimbal:"使うなら湿地の縁を低くゆっくり。",newAngle:"『花』を主役にしすぎず、花＋水＋鳥の音で場所そのものを作品にする。",source:"岩美町公式"},
+{area:"岩美町",name:"城原海岸",access:"バス・徒歩／便確認",sound:"波・風",season:"夕方／通年",look:["岩の形","海面の反射","夕方の雲","人が少なくなる時間","海岸へ向かう道"],today:"昼の絶景より、夕方に空が変わる時間を狙う。",hand:"固定多め。",gimbal:"海岸へ入る短い導線。",newAngle:"『海岸の絶景』ではなく、空と海の色が変わる過程を30〜60秒の中で見せる。",source:"岩美町公式"},
+/* 八頭・若桜 */
+{area:"八頭町",name:"丹比駅〜八東川周辺",access:"若桜鉄道・徒歩",sound:"列車・川・鳥",season:"桜／新緑／秋",look:["木造駅舎","線路と川","駅を出る人","橋","川面の反射"],today:"駅だけで終わらず、駅→川→集落の順で歩いて『鉄道が生活に溶け込んでいる町』を撮る。",hand:"駅で固定、町では短い手持ち。",gimbal:"列車到着後の人の流れを追わず、駅から町へ出る導線に使う。",newAngle:"列車そのものではなく、列車が来たことで変わる町の音と人の動きを狙う。",source:"とっとり旅・八頭町観光情報"},
+{area:"若桜町",name:"若桜駅〜町なかの水路",access:"バス",sound:"水路◎／生活音／駅",season:"通年／雨後",look:["水路の流れ","橋","家の軒先","駅から町へ変わる音","水と木の反射"],today:"水路の音を“若桜の環境音”として中心に置く。",hand:"水音を固定で録る時間を必ず作る。",gimbal:"水路→町の短い導線。",newAngle:"以前の町歩きとは別に、水路の音を作品の背骨にして映像を組む。"},
+{area:"若桜町",name:"若桜駅・木造駅舎",access:"バス",sound:"列車・駅・町",season:"通年／夕方",look:["駅舎の木部","ホーム","線路の奥行き","列車が去った後","駅前の静けさ"],today:"レトロな駅を説明するだけではなく、『列車が去った後』を撮る。",hand:"固定中心。",gimbal:"列車到着〜出発を追わず、駅前に残る時間を短く歩く。",newAngle:"ランタンフェスティバルとは別の、何も起きていない若桜を作品にする。",source:"とっとり旅"},
+/* 用瀬・智頭 */
+{area:"用瀬町",name:"用瀬駅〜川沿い",access:"列車",sound:"川◎／鳥／列車",season:"通年",look:["線路沿いの道","川面","橋","鳥の声","列車の音が町に混ざる瞬間"],today:"『駅前を撮る』ではなく、列車音→川音→鳥音の3層を探す。",hand:"固定多め。",gimbal:"駅から川へ向かう導線を短く。",newAngle:"前回と同じ場所でも、今回は音のレイヤーを意識して別作品にできる。"},
+{area:"智頭町",name:"宿場町〜川沿い",access:"列車・徒歩",sound:"川・鳥・生活音",season:"花／新緑／紅葉",look:["路地","川と家","花がある家の前","山が見える抜け","人が少ない時間"],today:"花だけで終わらず、花があることで変わった町の色を探す。",hand:"町歩きはゆっくり。固定を多めに。",gimbal:"宿場町の直線を1本だけ。",newAngle:"『花』をテーマにした前作との差別化として、今回は花を画面の端に置いて町の空気を主役にする。"},
+/* 倉吉・中部・西部 */
+{area:"倉吉市",name:"白壁土蔵群・裏通り",access:"列車・バス",sound:"静かな生活音",season:"夕方〜夜",look:["閉店後の店先","路地","水面","建物の隙間","帰宅する人"],today:"観光地らしさを減らし、『観光客が帰った後の町』を狙う。",hand:"固定＋短い手持ち。",gimbal:"散策感を作る場合のみ。",newAngle:"過去の夜の町歩き経験を、倉吉では“静けさ”に振ってみる。"},
+{area:"倉吉市",name:"玉川周辺",access:"列車・バス＋徒歩",sound:"水・街の生活音",season:"通年",look:["水面越しの白壁","橋","石","反射","生活の気配"],today:"建物を正面から説明せず、水面越しに町を見る。",hand:"水音を先に録る。",gimbal:"橋を渡る短い導線。",newAngle:"『白壁土蔵群』という観光ワードから離れて、水と町の関係を撮る。"},
+{area:"中部郊外",name:"季節の花・田園",access:"場所ごとに確認",sound:"鳥・虫・風",season:"開花状況を要確認",look:["花の群生ではなく周囲の風景","花と道","花と人","風で揺れる草","夕方の光"],today:"開花状況が確認できる場所を優先。『今咲いている』こと自体を今日の理由にする。",hand:"花のアップ連打を避ける。",gimbal:"花の中を歩くより、周囲との関係を見せる。",newAngle:"『花の動画』から一歩進んで、花がある町・道・人を撮る。"},
+{area:"米子市",name:"米子駅〜市街地",access:"列車",sound:"駅・街・生活音",season:"夕方〜夜",look:["駅から散る人","反射","店じまい","信号","裏通り"],today:"都会的に撮りすぎず、生活の時間を拾う。",hand:"固定中心。",gimbal:"駅→裏通りの導線。",newAngle:"大阪の夜景とは違い、“地方都市の夜が静かになる過程”を狙う。"},
+{area:"西部",name:"山・水辺の季節スポット",access:"列車・バス／便数注意",sound:"自然音優先",season:"紅葉・雪・花など現地確認",look:["水の流れ","山の重なり","季節の色","人の小ささ","集落"],today:"遠方は『行けるか』を先に確認。バス便が少ない場所は撮影難度を高く扱う。",hand:"固定中心。",gimbal:"動きが意味を持つ場所だけ。",newAngle:"観光名所を一周するより、1つの集落・水辺に絞る。"}
 ];
 
-function weatherFor(area){
-  // 試作版：実運用では地点ごとの最新気象APIへ接続
-  const seed = [...area].reduce((a,c)=>a+c.charCodeAt(0),0);
-  const wind = (1.4 + (seed%28)/10).toFixed(1);
-  const dirs=["北","北東","東","南東","南","南西","西","北西"];
-  return {temp:18+(seed%7),wind,dir:dirs[seed%dirs.length],weather:["晴れ","薄曇り","曇り"][seed%3]};
+const records=[
+{place:"東浜",note:"鳥の声・波・駅周辺の音を経験。再訪時は前回と違う道・音の位置を探す。",reuse:"音の違う地点を探す／夕方の海と駅の関係を狙う"},
+{place:"用瀬駅前",note:"鳥・川・列車の音が共存する場所として記録。",reuse:"音の3層を意識して別作品化"},
+{place:"若桜駅前・町なか",note:"水路の音が非常に強い。",reuse:"水路音を作品の背骨にする"},
+{place:"網代",note:"ジンバル＋不穏なグレーディングでミステリー系の表現を試した。",reuse:"同じ場所でも曲・色・音を変えれば別の物語にできる"},
+{place:"智頭・花",note:"『花』をテーマにした作品を制作。",reuse:"次回は花を主役から外し、町・水・音との関係を撮る"},
+{place:"鳥取砂丘",note:"訪問経験あり。完成作品には至っていない。",reuse:"砂丘そのものではなく、人・風紋・足跡・音・光をテーマに再設計"},
+{place:"しゃんしゃん傘踊り",note:"祭りの踊りだけでなく、踊っていない時間を多く使って祭りの雰囲気を表現。",reuse:"イベントでは『何も起きていない瞬間』を拾う感性を今後も活用"},
+{place:"大阪・道頓堀",note:"『ザ大阪』を表現。",reuse:"地方都市では逆に、派手さではなく静けさをテーマにする"}
+];
+
+let cache={};
+
+function weatherLabel(code){return ({0:"快晴",1:"晴れ",2:"一部曇り",3:"曇り",45:"霧",48:"霧",51:"霧雨",53:"霧雨",55:"霧雨",61:"弱い雨",63:"雨",65:"強い雨",71:"弱い雪",73:"雪",75:"強い雪",80:"にわか雨",81:"にわか雨",82:"強いにわか雨",95:"雷雨",96:"雷雨",99:"雷雨"})[code]||"天気情報"}
+function dir(deg){return ["北","北北東","北東","東北東","東","東南東","南東","南南東","南","南南西","南西","西南西","西","西北西","北西","北北西"][Math.round(deg/22.5)%16]}
+function time(s){return s?s.slice(11,16):"—"}
+function rad(x){return x*Math.PI/180} function deg(x){return x*180/Math.PI}
+function solarAzimuth(date,lat,lon,isSunrise){
+  const n=Math.floor((date-new Date(date.getFullYear(),0,0))/86400000);
+  const B=rad((360/365)*(n-81));
+  const eot=9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);
+  const decl=rad(23.45*Math.sin(rad((360/365)*(284+n))));
+  const tz=9, std=135;
+  const solarNoon=720-4*(lon-std)-eot+tz*60;
+  const ha=rad(15*((isSunrise?-1:1)*((Math.acos((Math.cos(rad(90.833))*1/(Math.cos(rad(lat))*Math.cos(decl)))-Math.tan(rad(lat))*Math.tan(decl)))*180/Math.PI/15)));
+  const H=ha;
+  const az=deg(Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(rad(lat))-Math.tan(decl)*Math.cos(rad(lat))));
+  return (az+180+360)%360;
 }
-function wxHTML(w){
- return `<div class="metric"><span>天気</span><b>${w.weather}</b></div><div class="metric"><span>気温</span><b>${w.temp}℃</b></div><div class="metric"><span>風速</span><b>${w.wind}m/s</b></div><div class="metric"><span>風向</span><b>${w.dir}</b></div>`;
+async function getWeather(area){
+  const key=area+"-"+new Date().toISOString().slice(0,10);
+  if(cache[key]) return cache[key];
+  const a=areas[area];
+  try{
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${a.lat}&longitude=${a.lon}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&timezone=Asia%2FTokyo&forecast_days=2`;
+    const d=await (await fetch(u)).json();
+    const now=new Date();
+    const w={temp:d.current.temperature_2m,wind:d.current.wind_speed_10m,dir:dir(d.current.wind_direction_10m),weather:weatherLabel(d.current.weather_code),sunrise:d.daily.sunrise[0],sunset:d.daily.sunset[0]};
+    const nowHour = new Date();
+    w.hourly=[];
+    for(let i=0;i<d.hourly.time.length;i++){
+      const t=new Date(d.hourly.time[i]);
+      // 各時間帯の15分前までは表示。
+      // 例：21:44までは22時台を表示し、21:45になったら22時台を除外する。
+      if(t>nowHour){
+        const removeAt=new Date(t);
+        removeAt.setMinutes(45,0,0);
+        if(nowHour < removeAt && w.hourly.length<5){
+          w.hourly.push({time:d.hourly.time[i],temp:d.hourly.temperature_2m[i],code:d.hourly.weather_code[i],pop:d.hourly.precipitation_probability[i],wind:d.hourly.wind_speed_10m[i],wdir:dir(d.hourly.wind_direction_10m[i])});
+        }
+      }
+    }
+    w.sunriseAz=solarAzimuth(now,a.lat,a.lon,true); w.sunsetAz=solarAzimuth(now,a.lat,a.lon,false);
+    cache[key]=w;return w;
+  }catch(e){return {temp:null,wind:null,dir:"—",weather:"取得できません",sunrise:null,sunset:null,sunriseAz:null,sunsetAz:null}}
 }
-function recommend(list,area){
- const w=weatherFor(area);
- return [...list].sort((a,b)=>b.score-a.score)[0];
+function wx(w){return w.temp===null?`<div class="metric"><span>天気</span><b>—</b></div><div class="metric"><span>気温</span><b>—</b></div><div class="metric"><span>風速</span><b>—</b></div><div class="metric"><span>風向</span><b>—</b></div>`:`<div class="metric"><span>天気</span><b>${w.weather}</b></div><div class="metric"><span>気温</span><b>${w.temp.toFixed(1)}℃</b></div><div class="metric"><span>風速</span><b>${w.wind.toFixed(1)}m/s</b></div><div class="metric"><span>風向</span><b>${w.dir}</b></div>`}
+function sun(w){return !w.sunrise?`<div class="sunbox"><b>日の出</b>—</div><div class="sunbox"><b>日の入り</b>—</div>`:`<div class="sunbox"><b>日の出 ${time(w.sunrise)}</b>方角 ${dir(w.sunriseAz)}</div><div class="sunbox"><b>日の入り ${time(w.sunset)}</b>方角 ${dir(w.sunsetAz)}</div>`}
+function forecastHtml(w){
+ if(!w.hourly || !w.hourly.length) return `<h4 style="margin:0 0 5px">この先の天候</h4><div class="muted">時間予報を取得できませんでした。</div>`;
+ const items=w.hourly.map(x=>`<div class="forecast-item"><span>${time(x.time)}</span><b>${weatherLabel(x.code)}</b><span>${x.temp.toFixed(0)}℃／風 ${x.wind.toFixed(1)}m/s</span><span>降水 ${x.pop}%</span></div>`).join("");
+ const rain=w.hourly.filter(x=>x.pop>=50).map(x=>time(x.time)).slice(0,3);
+ const strong=w.hourly.filter(x=>x.wind>=5).map(x=>`${time(x.time)}頃`).slice(0,3);
+ let risk="今後数時間の大きな変化は目立ちません。";
+ if(rain.length && strong.length) risk=`${rain.join("・")}頃は雨の可能性が高め。さらに${strong.join("・")}に風が強まる可能性があります。`;
+ else if(rain.length) risk=`${rain.join("・")}頃は降水の可能性が高め。出発を早めるか、雨を活かせる場所を選ぶ判断ができます。`;
+ else if(strong.length) risk=`${strong.join("・")}に風が強まる可能性があります。環境音を残したい場合は、風を遮れる場所を優先すると安心です。`;
+ return `<h4 style="margin:0 0 8px">🔮 この先の天候</h4><div class="forecast">${items}</div><div class="forecast-risk"><b>撮影への影響：</b>${risk}</div>`;
 }
-function card(s,w){
- return `<div class="card spot"><div class="row"><div><h3>${s.name}</h3><div class="sub">${s.access}</div></div><div class="score">撮影価値 ${s.score}/5</div></div>
- <div class="weather">${wxHTML(w)}</div>
- <div class="tags"><span class="tag">🔊 ${s.sound}</span><span class="tag">🎒 ${s.access}</span></div>
- <div class="detail"><b>👀 目を向けたいもの</b><br>${s.look}<br><br><b>手持ちなら</b> ${s.hand}<br><b>ジンバルなら</b> ${s.gimbal}</div></div>`;
+function suitability(s,w){
+ let n=0;
+ if(w.wind!==null){if(w.wind<=3)n+=2;else if(w.wind<=5)n+=0;else n-=2}
+ if(/雨|雷/.test(w.weather))n-=1;
+ return n;
 }
-function renderToday(){
- const w=weatherFor("鳥取市");
- document.getElementById("todayWeather").innerHTML=wxHTML(w);
- const windy=parseFloat(w.wind)>3;
- document.getElementById("todayDecision").innerHTML=windy ?
- "風がやや強め。MKE200で現地の空気感を残すあなたの撮影では、風の影響を受けにくい場所を優先したい日。雨ならさらに慎重に判断します。" :
- "風は比較的扱いやすい範囲。環境音を活かす撮影に向いていそうです。実運用では複数の気象ソースを照合して判断します。";
- const s=spots.filter(x=>x.area==="鳥取市")[0];
- document.getElementById("todayPick").innerHTML=card(s,w);
+function pick(list,w){return [...list].sort((a,b)=>suitability(b,w)-suitability(a,w))[0]}
+function currentShootingAdvice(s,w){
+  if(!w || w.wind===null) return s.today;
+  const wind=w.wind;
+  const futureRain=(w.hourly||[]).some(x=>x.pop>=50);
+  const futureStrong=(w.hourly||[]).some(x=>x.wind>=5);
+  let advice="";
+  if(s.area==="鳥取市" && s.name.includes("砂丘")){
+    if(wind<=3){
+      advice="現在は風が弱めなので、砂丘では風紋・足跡・砂の質感を静かに拾う狙いが向いています。環境音も残しやすいので、砂を踏む音や遠くの波・人の気配を入れた固定カットを長めに。";
+    }else if(wind<=5){
+      advice="砂丘では『風が強い／弱い』だけで判断せず、風で砂が動いている場所があるかを現地で確認。砂が飛ぶほどでなければ、風紋や足跡の形、低い位置からの砂の流れを狙うのがおすすめです。";
+    }else{
+      advice="砂丘は風の影響が出やすいので、砂が舞う場所ではなく、風下側の風紋・足跡・起伏を狙うのがおすすめ。マイクへの風当たりも強くなりやすいため、環境音を重視するなら遮られる場所を優先します。";
+    }
+    if(futureRain) advice+=" この先は降水の可能性が上がる時間帯があるため、夕景を狙うならその前に入る判断もありです。";
+    if(futureStrong) advice+=" この先は風が強まる時間帯もあるため、長居するなら現地で風の変化を見ながら切り上げ時を決めるのがよさそうです。";
+    return advice;
+  }
+  if(wind<=3) return `環境音を活かしやすい条件なので、${s.sound}を意識しながら固定ショットを長めに置くのがおすすめです。`;
+  if(wind<=5) return `風を理由に撮影方法を変えるほどではありませんが、${s.sound}を残したい場合は建物・木・地形などで風が弱まる位置を探して撮るのがおすすめです。`;
+  return `風の影響が出やすいので、${s.sound}を狙うなら風を遮れる場所を優先。逆に風そのものを画と音にできる場所なら、強風を作品の要素として利用するのもありです。`;
+}
+
+function card(s,w,hero=false){
+ return `<div class="card ${hero?"hero":""}">
+ <div class="row"><div><h3>${s.name}</h3><div class="muted">${s.access}</div></div></div>
+ <div class="tags"><span class="tag">🔊 ${s.sound}</span><span class="tag">🌿 ${s.season}</span></div>
+ <div class="block"><h4>🎯 今の条件なら、こう狙う</h4><p>${currentShootingAdvice(s,w)}</p></div>
+ <div class="block"><h4>👀 目を向けたいもの</h4><ul class="list">${s.look.map(x=>"<li>"+x+"</li>").join("")}</ul></div>
+ <div class="detail-grid block">
+   <div class="detail-box"><h4>📷 手持ちなら</h4><p>${s.hand}</p></div>
+   <div class="detail-box"><h4>🎥 ジンバルなら</h4><p>${s.gimbal}</p></div>
+ </div>
+ <div class="block"><h4>💡 いつもの撮り方から一歩外すなら</h4><div class="angle">${s.newAngle}</div></div>
+ ${s.source?`<div class="source">参考：${s.source}</div>`:""}
+ </div>`
+}
+async function renderToday(){
+ const w=await getWeather("鳥取市");
+ document.getElementById("todayStatus").textContent="鳥取市を基準に今日の条件を取得";
+ document.getElementById("todayWeather").innerHTML=wx(w);document.getElementById("todaySun").innerHTML=sun(w);document.getElementById("todayForecast").innerHTML=forecastHtml(w);
+ let d=w.wind===null?"気象情報を取得できませんでした。":w.wind<=3?"今は風が弱め。環境音を主役にしやすい条件なので、鳥・水・虫・生活音がある場所を優先。固定ショットを長めに置き、音が入るまで待つ撮り方が向いています。":w.wind<=5?"今は少し風があります。風上に開けた場所より、建物・木・路地・水路などで風を和らげられる場所を選び、風音が強くなりすぎない方向から環境音を狙うのがおすすめです。":"今は風が強め。風を避けられる場所を優先し、マイクに直接風が当たらない向き・遮蔽物を探すのがおすすめ。海岸など開けた場所は、風そのものを画と音にしたい場合に狙う方がよさそうです。";
+ document.getElementById("todayDecision").innerHTML=`<div class="note"><b>今の判断：</b>${d}<br><br><b>日の出／日の入り：</b>方角を先に知っておくと、現地で光の向きをイメージしやすくなります。</div>`;
+ const s=pick(spots.filter(x=>x.area==="鳥取市"),w);
+ document.getElementById("todayPick").innerHTML=card(s,w,true);
+ document.getElementById("quickAreas").innerHTML=["国府町","岩美町","八頭町","若桜町","用瀬町","智頭町"].map(n=>`<div class="card area" onclick="openArea('${n}')"><h3>${n}</h3><p>${areas[n].access}｜${areas[n].desc}</p></div>`).join("");
 }
 function renderAreas(){
- document.getElementById("areas").innerHTML=Object.entries(areas).map(([n,v])=>`<div class="card area" onclick="openArea('${n}')"><h3>${n}</h3><p>${v.access}　｜　${v.desc}</p></div>`).join("");
+ const order=["鳥取市","国府町","岩美町","八頭町","若桜町","用瀬町","智頭町","倉吉市","中部郊外","米子市","西部"];
+ document.getElementById("areas").innerHTML=order.map((n,i)=>`<div class="card area ${i<2?"top":""}" onclick="openArea('${n}')"><div class="priority">${i<2?"最優先":i<7?"東部・東部郊外":"中部・西部"}</div><h3>${n}</h3><p>${areas[n].access}｜${areas[n].desc}</p></div>`).join("");
 }
-function openArea(area){
- document.getElementById("areas").parentElement.classList.add("hidden");
- document.getElementById("areaView").classList.remove("hidden");
- document.getElementById("areaTitle").textContent=area;
- document.getElementById("areaSub").textContent=areas[area].access+"　｜　"+areas[area].desc;
- const list=spots.filter(s=>s.area===area);
- const w=weatherFor(area);
- const rec=recommend(list,area);
- document.getElementById("areaRecommend").innerHTML=rec ? `<div class="card hero"><h3>🤖 チャッピーレコメンド</h3><div class="why"><b>今日は「${rec.name}」を攻めるのがおすすめ</b><br>今日の条件と、あなたの撮影スタイルを踏まえると、ここで「${rec.look}」を狙う意味があります。</div>${card(rec,w)}</div>` : `<div class="notice">このエリアはまだ具体的な撮影スポット情報が少ないです。今後の探索候補です。</div>`;
- const others=list.filter(s=>!rec || s.name!==rec.name);
- document.getElementById("otherSpots").innerHTML=others.length?others.map(s=>card(s,w)).join(""):"<div class='notice'>このエリアの候補をこれから増やします。</div>";
+async function openArea(area){
+ document.getElementById("areaList").classList.add("hidden");document.getElementById("areaView").classList.remove("hidden");
+ document.getElementById("areaTitle").textContent=area;document.getElementById("areaSub").textContent=areas[area].access+"｜"+areas[area].desc;
+ const w=await getWeather(area);document.getElementById("areaStatus").textContent="このエリアの今日の条件";document.getElementById("areaWeather").innerHTML=wx(w);document.getElementById("areaSun").innerHTML=sun(w);document.getElementById("areaForecast").innerHTML=forecastHtml(w);
+ const list=spots.filter(s=>s.area===area), rec=pick(list,w);
+ document.getElementById("areaRecommend").innerHTML=rec?`<h2>🤖 チャッピーレコメンド</h2>${card(rec,w,true)}<div class="note">この推薦は「有名だから」ではなく、今日の天気・風・光・季節と、あなたが環境音を大切にする作風を合わせて選ぶ考え方です。</div>`:"<div class='note'>このエリアはまだ撮影情報が少ないため、候補を増やします。</div>";
+ const others=list.filter(s=>s!==rec);document.getElementById("otherSpots").innerHTML=others.length?others.map(s=>card(s,w)).join(""):"<div class='note'>このエリアの候補をこれから増やします。</div>";
 }
-function backAreas(){
- document.getElementById("areaView").classList.add("hidden");
- document.getElementById("areas").parentElement.classList.remove("hidden");
+function backAreas(){document.getElementById("areaView").classList.add("hidden");document.getElementById("areaList").classList.remove("hidden")}
+function renderRecords(){document.getElementById("recordList").innerHTML=records.map(r=>`<div class="card record"><h3>${r.place}</h3><p>${r.note}</p><div class="angle"><b>次に行くなら：</b>${r.reuse}</div></div>`).join("")}
+
+async function useCurrentLocationWeather(){
+ const status=document.getElementById("locationStatus");
+ status.textContent="位置情報を取得中…";
+ if(!navigator.geolocation){
+   status.textContent="このブラウザでは位置情報を利用できません。";
+   return;
+ }
+ navigator.geolocation.getCurrentPosition(async pos=>{
+   const lat=pos.coords.latitude, lon=pos.coords.longitude;
+   try{
+     status.textContent="現在地の天候を取得中…";
+     const w=await getWeather({lat,lon});
+     document.getElementById("todayWeather").innerHTML=wx(w);
+     document.getElementById("todaySun").innerHTML=sun(w);
+     document.getElementById("todayForecast").innerHTML=forecastHtml(w);
+     document.getElementById("todayDecision").innerHTML=`<div class="note"><b>現在地ベースの撮影判断：</b>${currentShootingAdvice({area:"現在地",name:"現在地",sound:"その場の環境音"},w)}</div>`;
+     status.textContent=`現在地に合わせて更新（位置精度 約${Math.round(pos.coords.accuracy)}m）`;
+   }catch(e){
+     console.error(e);
+     status.textContent="現在地の天候取得に失敗しました。";
+   }
+ }, err=>{
+   const messages={1:"位置情報の利用が許可されませんでした。",2:"現在地を取得できませんでした。",3:"位置情報の取得がタイムアウトしました。"};
+   status.textContent=messages[err.code]||"位置情報を取得できませんでした。";
+ },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
 }
+
+function updateCurrentTime(){
+ const now=new Date();
+ const h=String(now.getHours()).padStart(2,"0"), m=String(now.getMinutes()).padStart(2,"0");
+ document.getElementById("currentTime").textContent=`現在 ${h}:${m}`;
+}
+updateCurrentTime(); setInterval(updateCurrentTime,30000);
+document.getElementById("useLocationWeather").addEventListener("click",useCurrentLocationWeather);
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
- document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");
- document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));
- document.getElementById(b.dataset.tab).classList.remove("hidden");
-});
-renderAreas();renderToday();
+async function useCurrentLocationWeather(){
+ const status=document.getElementById("locationStatus");
+ status.textContent="位置情報を取得中…";
+ if(!navigator.geolocation){
+   status.textContent="このブラウザでは位置情報を利用できません。";
+   return;
+ }
+ navigator.geolocation.getCurrentPosition(async pos=>{
+   const lat=pos.coords.latitude, lon=pos.coords.longitude;
+   try{
+     status.textContent="現在地の天候を取得中…";
+     const w=await getWeather({lat,lon});
+     document.getElementById("todayWeather").innerHTML=wx(w);
+     document.getElementById("todaySun").innerHTML=sun(w);
+     document.getElementById("todayForecast").innerHTML=forecastHtml(w);
+     document.getElementById("todayDecision").innerHTML=`<div class="note"><b>現在地ベースの撮影判断：</b>${currentShootingAdvice({area:"現在地",name:"現在地",sound:"その場の環境音"},w)}</div>`;
+     status.textContent=`現在地に合わせて更新（位置精度 約${Math.round(pos.coords.accuracy)}m）`;
+   }catch(e){
+     console.error(e);
+     status.textContent="現在地の天候取得に失敗しました。";
+   }
+ }, err=>{
+   const messages={1:"位置情報の利用が許可されませんでした。",2:"現在地を取得できませんでした。",3:"位置情報の取得がタイムアウトしました。"};
+   status.textContent=messages[err.code]||"位置情報を取得できませんでした。";
+ },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+}
+
+function updateCurrentTime(){
+ const now=new Date();
+ const h=String(now.getHours()).padStart(2,"0"), m=String(now.getMinutes()).padStart(2,"0");
+ document.getElementById("currentTime").textContent=`現在 ${h}:${m}`;
+}
+updateCurrentTime(); setInterval(updateCurrentTime,30000);
+document.getElementById("useLocationWeather").addEventListener("click",useCurrentLocationWeather);
+document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));document.getElementById(b.dataset.tab).classList.remove("hidden")});
+renderAreas();renderRecords();renderToday();
 </script>
 </body>
 </html>
