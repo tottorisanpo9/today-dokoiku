@@ -49,7 +49,7 @@ button.primary{border:0;background:var(--accent);color:#fff;border-radius:10px;p
     <p class="lead">「今、家を出るならどうか」を判断。現在の天候・風・光に加え、この先数時間の変化も見て撮影条件を考えます。</p>
     <div class="card">
       <div id="todayStatus" class="status">気象情報を取得しています…</div>
-      <div id="todayWeather" class="weather"></div><div style="margin-top:8px"><button class="secondary" id="useLocationWeather">📍 現在地の天候を取得</button><div id="locationStatus" class="muted" style="margin-top:6px"></div><div id="locationSummary" class="location-summary hidden"></div><div class="muted" style="margin-top:5px">風速はm/s表示。天候は気象モデルの推定値で、現地の実測値ではありません。</div></div>
+      <div id="todayWeather" class="weather"></div><div style="margin-top:8px"><button class="secondary" id="useLocationWeather">📍 現在地の天候を取得</button><div id="locationStatus" class="muted" style="margin-top:6px"></div><div id="locationSummary" class="location-summary hidden"></div><div class="muted" style="margin-top:5px">気温は最寄りの気象庁アメダス観測値（取得できる場合）。風・天気・時間予報は気象モデルの推定値です。観測所と実際の撮影地点で差が出ることがあります。</div></div>
       <div id="todaySun" class="sun"></div>
       <div id="todayForecast" class="card" style="margin-top:10px"></div>
       <div id="todayDecision"></div>
@@ -175,6 +175,54 @@ function solarAzimuth(date,lat,lon,isSunrise){
   const az=deg(Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(rad(lat))-Math.tan(decl)*Math.cos(rad(lat))));
   return (az+180+360)%360;
 }
+const amedasCache = new Map();
+function coordToDecimal(value){
+  if(Number.isFinite(value)) return value;
+  if(!Array.isArray(value) || value.length<2) return NaN;
+  return Number(value[0]) + Number(value[1]||0)/60 + Number(value[2]||0)/3600;
+}
+function distanceKm(lat1,lon1,lat2,lon2){
+  const rad=v=>v*Math.PI/180, dLat=rad(lat2-lat1), dLon=rad(lon2-lon1);
+  const h=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;
+  return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+}
+async function getNearestAmedasTemperature(lat,lon){
+  try{
+    const cacheKey=`${lat.toFixed(2)},${lon.toFixed(2)}`;
+    const cached=amedasCache.get(cacheKey);
+    if(cached && Date.now()-cached.fetchedAt<10*60*1000){
+      return cached.result && cached.result.distanceKm<=30 ? cached.result : null;
+    }
+    const latestRes=await fetch('https://www.jma.go.jp/bosai/amedas/data/latest_time.txt',{cache:'no-store'});
+    if(!latestRes.ok) throw new Error('AMeDAS latest time unavailable');
+    const latestText=(await latestRes.text()).trim();
+    const match=latestText.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if(!match) throw new Error('AMeDAS timestamp invalid');
+    const stamp=match.slice(1).join('')+'00';
+    const [tableRes,dataRes]=await Promise.all([
+      fetch('https://www.jma.go.jp/bosai/amedas/const/amedastable.json',{cache:'force-cache'}),
+      fetch(`https://www.jma.go.jp/bosai/amedas/data/map/${stamp}.json`,{cache:'no-store'})
+    ]);
+    if(!tableRes.ok || !dataRes.ok) throw new Error('AMeDAS data unavailable');
+    const [table,observations]=await Promise.all([tableRes.json(),dataRes.json()]);
+    let nearest=null;
+    for(const [id,station] of Object.entries(table)){
+      const stLat=coordToDecimal(station.lat), stLon=coordToDecimal(station.lon);
+      const raw=observations[id]?.temp?.[0];
+      if(!Number.isFinite(stLat)||!Number.isFinite(stLon)||!Number.isFinite(raw)) continue;
+      const km=distanceKm(lat,lon,stLat,stLon);
+      if(!nearest || km<nearest.distanceKm){
+        nearest={temperature:raw,station:station.kjName||station.knName||station.enName||'アメダス観測所',distanceKm:km,time:latestText};
+      }
+    }
+    amedasCache.set(cacheKey,{result:nearest,fetchedAt:Date.now()});
+    return nearest && nearest.distanceKm<=30 ? nearest : null;
+  }catch(e){
+    console.warn('AMeDAS temperature unavailable; using model temperature',e);
+    return null;
+  }
+}
+
 async function getWeather(area){
   const isCoords = area && typeof area === "object" &&
     Number.isFinite(area.lat) && Number.isFinite(area.lon);
@@ -191,7 +239,11 @@ async function getWeather(area){
     const d=await response.json();
     if(!d.current || !d.hourly || !d.daily) throw new Error("weather API response incomplete");
     const now=new Date();
-    const w={temp:d.current.temperature_2m,wind:d.current.wind_speed_10m,dir:dir(d.current.wind_direction_10m),weather:weatherLabel(d.current.weather_code),sunrise:d.daily.sunrise[0],sunset:d.daily.sunset[0]};
+    const observedTemp=await getNearestAmedasTemperature(a.lat,a.lon);
+    const w={temp:observedTemp ? observedTemp.temperature : d.current.temperature_2m,
+      tempObserved:!!observedTemp,tempStation:observedTemp?.station||null,tempDistance:observedTemp?.distanceKm??null,
+      tempObservedAt:observedTemp?.time||null,modelTemp:d.current.temperature_2m,
+      wind:d.current.wind_speed_10m,dir:dir(d.current.wind_direction_10m),weather:weatherLabel(d.current.weather_code),sunrise:d.daily.sunrise[0],sunset:d.daily.sunset[0]};
     w.hourly=[];
     for(let i=0;i<d.hourly.time.length;i++){
       const t=new Date(d.hourly.time[i]);
@@ -214,7 +266,7 @@ async function getWeather(area){
   }
 }
 
-function wx(w){return w.temp===null?`<div class="metric"><span>天気</span><b>—</b></div><div class="metric"><span>気温</span><b>—</b></div><div class="metric"><span>風速</span><b>—</b></div><div class="metric"><span>風向</span><b>—</b></div>`:`<div class="metric"><span>天気</span><b>${w.weather}</b></div><div class="metric"><span>気温</span><b>${w.temp.toFixed(1)}℃</b></div><div class="metric"><span>風速</span><b>${w.wind.toFixed(1)}m/s</b></div><div class="metric"><span>風向</span><b>${w.dir}</b></div>`}
+function wx(w){const tempLabel=w.tempObserved?'気温（観測）':'気温（推定）';return w.temp===null?`<div class="metric"><span>天気</span><b>—</b></div><div class="metric"><span>気温</span><b>—</b></div><div class="metric"><span>風速</span><b>—</b></div><div class="metric"><span>風向</span><b>—</b></div>`:`<div class="metric"><span>天気</span><b>${w.weather}</b></div><div class="metric"><span>${tempLabel}</span><b>${w.temp.toFixed(1)}℃</b></div><div class="metric"><span>風速</span><b>${w.wind.toFixed(1)}m/s</b></div><div class="metric"><span>風向</span><b>${w.dir}</b></div>`}
 function sun(w){return !w.sunrise?`<div class="sunbox"><b>日の出</b>—</div><div class="sunbox"><b>日の入り</b>—</div>`:`<div class="sunbox"><b>日の出 ${time(w.sunrise)}</b>方角 ${dir(w.sunriseAz)}</div><div class="sunbox"><b>日の入り ${time(w.sunset)}</b>方角 ${dir(w.sunsetAz)}</div>`}
 function forecastHtml(w){
  if(!w.hourly || !w.hourly.length) return `<h4 style="margin:0 0 5px">この先の天候</h4><div class="muted">時間予報を取得できませんでした。</div>`;
@@ -273,7 +325,7 @@ function card(s,w,hero=false){
 }
 async function renderToday(){
  const w=await getWeather("鳥取市");
- document.getElementById("todayStatus").textContent="鳥取市を基準に今日の条件を取得";
+ document.getElementById("todayStatus").textContent=w.tempObserved?`鳥取市周辺｜気温は気象庁アメダス「${w.tempStation}」の観測値（${w.tempObservedAt.slice(11,16)}・約${Math.round(w.tempDistance)}km）／風・天気はモデル推定`:"鳥取市を基準に今日の条件を取得（気温・風・天気は気象モデル推定）";
  document.getElementById("todayWeather").innerHTML=wx(w);document.getElementById("todaySun").innerHTML=sun(w);document.getElementById("todayForecast").innerHTML=forecastHtml(w);
  let d=w.wind===null?"気象情報を取得できませんでした。":w.wind<=3?"今は風が弱め。環境音を主役にしやすい条件なので、鳥・水・虫・生活音がある場所を優先。固定ショットを長めに置き、音が入るまで待つ撮り方が向いています。":w.wind<=5?"今は少し風があります。風上に開けた場所より、建物・木・路地・水路などで風を和らげられる場所を選び、風音が強くなりすぎない方向から環境音を狙うのがおすすめです。":"今は風が強め。風を避けられる場所を優先し、マイクに直接風が当たらない向き・遮蔽物を探すのがおすすめ。海岸など開けた場所は、風そのものを画と音にしたい場合に狙う方がよさそうです。";
  document.getElementById("todayDecision").innerHTML=`<div class="note"><b>今の判断：</b>${d}<br><br><b>日の出／日の入り：</b>方角を先に知っておくと、現地で光の向きをイメージしやすくなります。</div>`;
@@ -286,9 +338,13 @@ function renderAreas(){
  document.getElementById("areas").innerHTML=order.map((n,i)=>`<div class="card area ${i<2?"top":""}" onclick="openArea('${n}')"><div class="priority">${i<2?"最優先":i<7?"東部・東部郊外":"中部・西部"}</div><h3>${n}</h3><p>${areas[n].access}｜${areas[n].desc}</p></div>`).join("");
 }
 async function openArea(area){
+ document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+ document.querySelector('.tab[data-tab="spots"]').classList.add("active");
+ document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));
+ document.getElementById("spots").classList.remove("hidden");
  document.getElementById("areaList").classList.add("hidden");document.getElementById("areaView").classList.remove("hidden");
  document.getElementById("areaTitle").textContent=area;document.getElementById("areaSub").textContent=areas[area].access+"｜"+areas[area].desc;
- const w=await getWeather(area);document.getElementById("areaStatus").textContent="このエリアの今日の条件";document.getElementById("areaWeather").innerHTML=wx(w);document.getElementById("areaSun").innerHTML=sun(w);document.getElementById("areaForecast").innerHTML=forecastHtml(w);
+ const w=await getWeather(area);document.getElementById("areaStatus").textContent=w.tempObserved?`気温：気象庁アメダス「${w.tempStation}」の観測値（${w.tempObservedAt.slice(11,16)}・約${Math.round(w.tempDistance)}km）｜風・天気・予報：気象モデル推定`:"気温・風・天気：気象モデルの推定値（近隣観測値を取得できませんでした）";document.getElementById("areaWeather").innerHTML=wx(w);document.getElementById("areaSun").innerHTML=sun(w);document.getElementById("areaForecast").innerHTML=forecastHtml(w);
  const list=spots.filter(s=>s.area===area), rec=pick(list,w);
  document.getElementById("areaRecommend").innerHTML=rec?`<h2>🤖 チャッピーレコメンド</h2>${card(rec,w,true)}<div class="note">この推薦は「有名だから」ではなく、今日の天気・風・光・季節と、あなたが環境音を大切にする作風を合わせて選ぶ考え方です。</div>`:"<div class='note'>このエリアはまだ撮影情報が少ないため、候補を増やします。</div>";
  const others=list.filter(s=>s!==rec);document.getElementById("otherSpots").innerHTML=others.length?others.map(s=>card(s,w)).join(""):"<div class='note'>このエリアの候補をこれから増やします。</div>";
@@ -320,7 +376,7 @@ async function useCurrentLocationWeather(){
      const fetchedAt=new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
      summary.innerHTML=`📍 <strong>現在地：GPS取得地点周辺</strong><div class="sub">緯度 ${lat.toFixed(4)}／経度 ${lon.toFixed(4)}<br>GPS精度 約${Math.round(pos.coords.accuracy)}m ・ 天候取得 ${fetchedAt}<br>気象モデルの推定値（現地の実測値ではありません）</div>`;
      summary.classList.remove("hidden");
-     status.textContent="GPS地点の天候に更新しました。";
+     status.textContent=w.tempObserved?`GPS地点周辺の天候を更新（気温はアメダス「${w.tempStation}」・約${Math.round(w.tempDistance)}km）`:"GPS地点周辺の天候を更新（気温は気象モデル推定）";
    }catch(e){
      console.error(e);
      status.textContent="GPSは取得できましたが、天候データを取得できませんでした。現在地の天候としては表示していません。";
@@ -343,41 +399,11 @@ function updateCurrentTime(){
 updateCurrentTime(); setInterval(updateCurrentTime,30000);
 document.getElementById("useLocationWeather").addEventListener("click",useCurrentLocationWeather);
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
-async function useCurrentLocationWeather(){
- const status=document.getElementById("locationStatus");
- status.textContent="位置情報を取得中…";
- if(!navigator.geolocation){
-   status.textContent="このブラウザでは位置情報を利用できません。";
-   return;
- }
- navigator.geolocation.getCurrentPosition(async pos=>{
-   const lat=pos.coords.latitude, lon=pos.coords.longitude;
-   try{
-     status.textContent="現在地の天候を取得中…";
-     const w=await getWeather({lat,lon});
-     document.getElementById("todayWeather").innerHTML=wx(w);
-     document.getElementById("todaySun").innerHTML=sun(w);
-     document.getElementById("todayForecast").innerHTML=forecastHtml(w);
-     document.getElementById("todayDecision").innerHTML=`<div class="note"><b>現在地ベースの撮影判断：</b>${currentShootingAdvice({area:"現在地",name:"現在地",sound:"その場の環境音"},w)}</div>`;
-     status.textContent=`現在地に合わせて更新（位置精度 約${Math.round(pos.coords.accuracy)}m）`;
-   }catch(e){
-     console.error(e);
-     status.textContent="現在地の天候取得に失敗しました。";
-   }
- }, err=>{
-   const messages={1:"位置情報の利用が許可されませんでした。",2:"現在地を取得できませんでした。",3:"位置情報の取得がタイムアウトしました。"};
-   status.textContent=messages[err.code]||"位置情報を取得できませんでした。";
- },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
-}
-
-function updateCurrentTime(){
- const now=new Date();
- const h=String(now.getHours()).padStart(2,"0"), m=String(now.getMinutes()).padStart(2,"0");
- document.getElementById("currentTime").textContent=`現在 ${h}:${m}`;
-}
-updateCurrentTime(); setInterval(updateCurrentTime,30000);
-document.getElementById("useLocationWeather").addEventListener("click",useCurrentLocationWeather);
-document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));document.getElementById(b.dataset.tab).classList.remove("hidden")});
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));
+  document.getElementById(b.dataset.tab).classList.remove("hidden");
+});
 renderAreas();renderRecords();renderToday();
 </script>
 </body>
