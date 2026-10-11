@@ -7,7 +7,7 @@
 <style>
 :root{--bg:#f5f4f0;--card:#fff;--ink:#20201e;--muted:#686761;--line:#dedcd5;--accent:#405d50;--accent2:#e9eee9;--warn:#8a5d31;--blue:#456b84}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;line-height:1.55}
-header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px 10px}.header-top{display:flex;justify-content:space-between;align-items:center;gap:10px}.current-time{font-size:14px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent);white-space:nowrap}
+header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px 10px}.header-top{display:flex;justify-content:space-between;align-items:center;gap:10px}.location-summary{margin-top:8px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#f7faf8;font-size:14px;line-height:1.55}.location-summary .sub{font-size:12px;color:#66736b;margin-top:2px}.current-time{font-size:14px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent);white-space:nowrap}
 header h1{margin:0;font-size:23px}header h1 span{font-size:10px;color:var(--muted);font-weight:500;margin-left:7px}
 nav{display:flex;gap:7px;margin-top:12px;overflow:auto}nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 13px;white-space:nowrap}nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 main{max-width:1040px;margin:auto;padding:18px}.panel.hidden{display:none}.section{margin-bottom:22px}.section h2{font-size:18px;margin:0 0 5px}.lead,.small,.muted{color:var(--muted);font-size:12px}
@@ -49,7 +49,7 @@ button.primary{border:0;background:var(--accent);color:#fff;border-radius:10px;p
     <p class="lead">「今、家を出るならどうか」を判断。現在の天候・風・光に加え、この先数時間の変化も見て撮影条件を考えます。</p>
     <div class="card">
       <div id="todayStatus" class="status">気象情報を取得しています…</div>
-      <div id="todayWeather" class="weather"></div><div style="margin-top:8px"><button class="secondary" id="useLocationWeather">📍 現在地の天候を取得</button><span id="locationStatus" class="muted" style="margin-left:8px"></span><div class="muted" style="margin-top:5px">位置情報を許可すると、その地点の緯度・経度を使って天候を計算します。</div></div>
+      <div id="todayWeather" class="weather"></div><div style="margin-top:8px"><button class="secondary" id="useLocationWeather">📍 現在地の天候を取得</button><div id="locationStatus" class="muted" style="margin-top:6px"></div><div id="locationSummary" class="location-summary hidden"></div><div class="muted" style="margin-top:5px">風速はm/s表示。天候は気象モデルの推定値で、現地の実測値ではありません。</div></div>
       <div id="todaySun" class="sun"></div>
       <div id="todayForecast" class="card" style="margin-top:10px"></div>
       <div id="todayDecision"></div>
@@ -176,32 +176,44 @@ function solarAzimuth(date,lat,lon,isSunrise){
   return (az+180+360)%360;
 }
 async function getWeather(area){
-  const key=area+"-"+new Date().toISOString().slice(0,10);
+  const isCoords = area && typeof area === "object" &&
+    Number.isFinite(area.lat) && Number.isFinite(area.lon);
+  const a = isCoords ? area : areas[area];
+  if(!a || !Number.isFinite(a.lat) || !Number.isFinite(a.lon)){
+    throw new Error("weather location is invalid");
+  }
+  const key=(isCoords ? `gps-${a.lat.toFixed(3)}-${a.lon.toFixed(3)}` : area)+"-"+new Date().toISOString().slice(0,10);
   if(cache[key]) return cache[key];
-  const a=areas[area];
   try{
-    const u=`https://api.open-meteo.com/v1/forecast?latitude=${a.lat}&longitude=${a.lon}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&timezone=Asia%2FTokyo&forecast_days=2`;
-    const d=await (await fetch(u)).json();
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${a.lat}&longitude=${a.lon}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&timezone=Asia%2FTokyo&forecast_days=2&wind_speed_unit=ms`;
+    const response=await fetch(u);
+    if(!response.ok) throw new Error("weather API HTTP "+response.status);
+    const d=await response.json();
+    if(!d.current || !d.hourly || !d.daily) throw new Error("weather API response incomplete");
     const now=new Date();
     const w={temp:d.current.temperature_2m,wind:d.current.wind_speed_10m,dir:dir(d.current.wind_direction_10m),weather:weatherLabel(d.current.weather_code),sunrise:d.daily.sunrise[0],sunset:d.daily.sunset[0]};
-    const nowHour = new Date();
     w.hourly=[];
     for(let i=0;i<d.hourly.time.length;i++){
       const t=new Date(d.hourly.time[i]);
-      // 各時間帯の15分前までは表示。
-      // 例：21:44までは22時台を表示し、21:45になったら22時台を除外する。
-      if(t>nowHour){
+      if(t>now){
         const removeAt=new Date(t);
         removeAt.setMinutes(45,0,0);
-        if(nowHour < removeAt && w.hourly.length<5){
+        if(now < removeAt && w.hourly.length<5){
           w.hourly.push({time:d.hourly.time[i],temp:d.hourly.temperature_2m[i],code:d.hourly.weather_code[i],pop:d.hourly.precipitation_probability[i],wind:d.hourly.wind_speed_10m[i],wdir:dir(d.hourly.wind_direction_10m[i])});
         }
       }
     }
-    w.sunriseAz=solarAzimuth(now,a.lat,a.lon,true); w.sunsetAz=solarAzimuth(now,a.lat,a.lon,false);
-    cache[key]=w;return w;
-  }catch(e){return {temp:null,wind:null,dir:"—",weather:"取得できません",sunrise:null,sunset:null,sunriseAz:null,sunsetAz:null}}
+    w.sunriseAz=solarAzimuth(now,a.lat,a.lon,true);
+    w.sunsetAz=solarAzimuth(now,a.lat,a.lon,false);
+    w.fetchedAt=new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+    cache[key]=w;
+    return w;
+  }catch(e){
+    console.error("Weather fetch failed",e);
+    throw e;
+  }
 }
+
 function wx(w){return w.temp===null?`<div class="metric"><span>天気</span><b>—</b></div><div class="metric"><span>気温</span><b>—</b></div><div class="metric"><span>風速</span><b>—</b></div><div class="metric"><span>風向</span><b>—</b></div>`:`<div class="metric"><span>天気</span><b>${w.weather}</b></div><div class="metric"><span>気温</span><b>${w.temp.toFixed(1)}℃</b></div><div class="metric"><span>風速</span><b>${w.wind.toFixed(1)}m/s</b></div><div class="metric"><span>風向</span><b>${w.dir}</b></div>`}
 function sun(w){return !w.sunrise?`<div class="sunbox"><b>日の出</b>—</div><div class="sunbox"><b>日の入り</b>—</div>`:`<div class="sunbox"><b>日の出 ${time(w.sunrise)}</b>方角 ${dir(w.sunriseAz)}</div><div class="sunbox"><b>日の入り ${time(w.sunset)}</b>方角 ${dir(w.sunsetAz)}</div>`}
 function forecastHtml(w){
@@ -286,29 +298,41 @@ function renderRecords(){document.getElementById("recordList").innerHTML=records
 
 async function useCurrentLocationWeather(){
  const status=document.getElementById("locationStatus");
+ const summary=document.getElementById("locationSummary");
  status.textContent="位置情報を取得中…";
+ summary.classList.add("hidden");
  if(!navigator.geolocation){
-   status.textContent="このブラウザでは位置情報を利用できません。";
+   status.textContent="このブラウザでは位置情報を利用できません。HTTPSのサイトでお試しください。";
    return;
  }
  navigator.geolocation.getCurrentPosition(async pos=>{
    const lat=pos.coords.latitude, lon=pos.coords.longitude;
    try{
-     status.textContent="現在地の天候を取得中…";
+     status.textContent="GPS地点の天候を取得中…";
      const w=await getWeather({lat,lon});
+     if(!w || !Number.isFinite(w.temp) || !Number.isFinite(w.wind)){
+       throw new Error("weather values missing");
+     }
      document.getElementById("todayWeather").innerHTML=wx(w);
      document.getElementById("todaySun").innerHTML=sun(w);
      document.getElementById("todayForecast").innerHTML=forecastHtml(w);
      document.getElementById("todayDecision").innerHTML=`<div class="note"><b>現在地ベースの撮影判断：</b>${currentShootingAdvice({area:"現在地",name:"現在地",sound:"その場の環境音"},w)}</div>`;
-     status.textContent=`現在地に合わせて更新（位置精度 約${Math.round(pos.coords.accuracy)}m）`;
+     const fetchedAt=new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+     summary.innerHTML=`📍 <strong>現在地：GPS取得地点周辺</strong><div class="sub">緯度 ${lat.toFixed(4)}／経度 ${lon.toFixed(4)}<br>GPS精度 約${Math.round(pos.coords.accuracy)}m ・ 天候取得 ${fetchedAt}<br>気象モデルの推定値（現地の実測値ではありません）</div>`;
+     summary.classList.remove("hidden");
+     status.textContent="GPS地点の天候に更新しました。";
    }catch(e){
      console.error(e);
-     status.textContent="現在地の天候取得に失敗しました。";
+     status.textContent="GPSは取得できましたが、天候データを取得できませんでした。現在地の天候としては表示していません。";
+     summary.innerHTML=`📍 <strong>現在地：GPS取得済み</strong><div class="sub">天候データを取得できなかったため、現在地の天候としては表示していません。</div>`;
+     summary.classList.remove("hidden");
    }
  }, err=>{
    const messages={1:"位置情報の利用が許可されませんでした。",2:"現在地を取得できませんでした。",3:"位置情報の取得がタイムアウトしました。"};
    status.textContent=messages[err.code]||"位置情報を取得できませんでした。";
- },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+   summary.innerHTML=`📍 <strong>現在地：未取得</strong><div class="sub">現在地の天候は表示していません。エリア指定の情報とは別扱いです。</div>`;
+   summary.classList.remove("hidden");
+ },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
 }
 
 function updateCurrentTime(){
