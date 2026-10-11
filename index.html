@@ -338,6 +338,7 @@ function renderAreas(){
  document.getElementById("areas").innerHTML=order.map((n,i)=>`<div class="card area ${i<2?"top":""}" onclick="openArea('${n}')"><div class="priority">${i<2?"最優先":i<7?"東部・東部郊外":"中部・西部"}</div><h3>${n}</h3><p>${areas[n].access}｜${areas[n].desc}</p></div>`).join("");
 }
 async function openArea(area){
+ window.scrollTo({top:0,behavior:"smooth"});
  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
  document.querySelector('.tab[data-tab="spots"]').classList.add("active");
  document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));
@@ -349,7 +350,7 @@ async function openArea(area){
  document.getElementById("areaRecommend").innerHTML=rec?`<h2>🤖 チャッピーレコメンド</h2>${card(rec,w,true)}<div class="note">この推薦は「有名だから」ではなく、今日の天気・風・光・季節と、あなたが環境音を大切にする作風を合わせて選ぶ考え方です。</div>`:"<div class='note'>このエリアはまだ撮影情報が少ないため、候補を増やします。</div>";
  const others=list.filter(s=>s!==rec);document.getElementById("otherSpots").innerHTML=others.length?others.map(s=>card(s,w)).join(""):"<div class='note'>このエリアの候補をこれから増やします。</div>";
 }
-function backAreas(){document.getElementById("areaView").classList.add("hidden");document.getElementById("areaList").classList.remove("hidden")}
+function backAreas(){window.scrollTo({top:0,behavior:"smooth"});document.getElementById("areaView").classList.add("hidden");document.getElementById("areaList").classList.remove("hidden")}
 function renderRecords(){document.getElementById("recordList").innerHTML=records.map(r=>`<div class="card record"><h3>${r.place}</h3><p>${r.note}</p><div class="angle"><b>次に行くなら：</b>${r.reuse}</div></div>`).join("")}
 
 async function useCurrentLocationWeather(){
@@ -399,6 +400,7 @@ function updateCurrentTime(){
 updateCurrentTime(); setInterval(updateCurrentTime,30000);
 document.getElementById("useLocationWeather").addEventListener("click",useCurrentLocationWeather);
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  window.scrollTo({top:0,behavior:"smooth"});
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");
   document.querySelectorAll(".panel").forEach(x=>x.classList.add("hidden"));
